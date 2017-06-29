@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <utils.h>
+#include <matrix_utils.h>
 
 #define MAX_ITERATIONS 100
-#define ACCURACY 1.0e-4
 #define DEBUG 0
 
 
@@ -35,22 +35,11 @@ int main(int argc, char **argv) {
   float local[procgridsize + additional_rows][gridsize]; // local array. each process gives its grid's partition
   float xnew[procgridsize + additional_rows][gridsize]; // xnew array
 
-  int k = 0;
-  for (int i = first_local_row; i <= last_local_row; i++) {
-    for (int j = 0; j < gridsize; j++) {
-      local[i][j] = (++k % (num_proc + 1)) + rank;
-    }
-  }
+  generate_matrix(first_local_row, last_local_row, gridsize, rank, num_proc, local);
 
 #if DEBUG
   printf("Complete array of %d is: \n", rank);
-  for (int i = 0; i < procgridsize + additional_rows; i++) {
-    for (int j = 0; j < gridsize; j++) {
-      printf("%.2f ", local[i][j]);
-    }
-    printf("\n");
-  }
-  printf("----------- \n");
+  print_matrix(procgridsize + additional_rows, gridsize, local);
 #endif
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -91,20 +80,14 @@ int main(int argc, char **argv) {
     }
 #if DEBUG
     printf("Complete array of %d at iteration %d is: \n", rank, iteration_count);
-    for (int i = 0; i < procgridsize + additional_rows; i++) {
-      printf("%d |", i);
-      for (int j = 0; j < gridsize; j++) {
-        printf("%.2f ", local[i][j]);
-      }
-      printf("\n");
-    }
-    printf("----------- \n");
+    print_matrix(procgridsize + additional_rows, gridsize, local);
 #endif
 
     // Do dirty job
     diffnorm = 0.0;
     int first_i = rank == 0 ? first_local_row + 1 : first_local_row; // avoid ghostpoints
     int last_i = rank == num_proc - 1 ? last_local_row - 1: last_local_row;
+
 #if DEBUG
     printf("[%d] iteration: %d; first_i: %d; last_i: %d \n", rank, iteration_count, first_i, last_i);
 #endif
