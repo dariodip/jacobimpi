@@ -35,7 +35,7 @@ Per effettuare il test di convergenza calcoliamo:
         diffnorm += (xnew[i][j] - x[i][j]) * (xnew[i][j] - x[i][j]);
     diffnorm = sqrt(diffnorm);
 
-Quando `diffnorm` è minore di *1.0e-2* oppure sono state raggiunte le 100 iterazioni, allora è stata 
+Quando `diffnorm` è minore di *1.0e-4* oppure sono state raggiunte le 100 iterazioni, allora è stata 
 raggiunta la convergenza e si esce dal loop.
 Occore fare uso delle operazioni di comunicazione collettiva di MPI.
 ## Solzione proposta

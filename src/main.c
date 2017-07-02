@@ -7,9 +7,15 @@
 
 #define MAX_ITERATIONS 100
 #define DEBUG 0
+#define THRESHOLD 1.0e-4
 
 
 int main(int argc, char **argv) {
+
+  if (argc != 2) {
+    fprintf(stderr, "usage: mpirun -np num_proc main N \n");
+    return -1;
+  }
 
   const int gridsize = atoi(argv[1]); // size of grid
   int rank;                           // rank of current process
@@ -23,6 +29,7 @@ int main(int argc, char **argv) {
 
   const int procgridsize = gridsize / num_proc; // size of process grid
   int additional_rows = 2;
+
   if (rank == 0) {
     additional_rows--;
   }
@@ -31,6 +38,15 @@ int main(int argc, char **argv) {
   }
   int first_local_row = rank == 0 ? 0 : 1;
   int last_local_row =  rank == 0 ? procgridsize - 1 : procgridsize;
+
+  if (rank == num_proc - 1 && gridsize % num_proc != 0) {
+    int other_rows = (gridsize % num_proc);
+    additional_rows += other_rows;
+    last_local_row += other_rows;
+  }
+
+  const int first_i = rank == 0 ? first_local_row + 1 : first_local_row; // avoid ghostpoints
+  const int last_i = rank == num_proc - 1 ? last_local_row - 1: last_local_row;
 
   float local[procgridsize + additional_rows][gridsize]; // local array. each process gives its grid's partition
   float xnew[procgridsize + additional_rows][gridsize]; // xnew array
@@ -47,7 +63,7 @@ int main(int argc, char **argv) {
 
   // Algorithm starts here
   int iteration_count = 0;
-  double diffnorm, global_diffnorm;
+  double diffnorm, global_diffnorm = 1.0;
 
 #if DEBUG
   if (rank == 0) {
@@ -55,7 +71,7 @@ int main(int argc, char **argv) {
   }
 #endif
 
-  while (iteration_count++ < MAX_ITERATIONS) {
+  while (iteration_count++ < MAX_ITERATIONS && global_diffnorm > THRESHOLD) {
     // First: exchange rows using a ring hierarchy
     // CASE 1: I'm the last processor so I don't send the last row
     if (rank < num_proc - 1) {
@@ -85,8 +101,6 @@ int main(int argc, char **argv) {
 
     // Do dirty job
     diffnorm = 0.0;
-    int first_i = rank == 0 ? first_local_row + 1 : first_local_row; // avoid ghostpoints
-    int last_i = rank == num_proc - 1 ? last_local_row - 1: last_local_row;
 
 #if DEBUG
     printf("[%d] iteration: %d; first_i: %d; last_i: %d \n", rank, iteration_count, first_i, last_i);
@@ -111,7 +125,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   time += MPI_Wtime();
   if (rank == 0) {
-    printf("Global Diffnorm: %.4f. \n", global_diffnorm);
+    printf("Global Diffnorm: %.4f. \n Total iterations: %d. \n", global_diffnorm, iteration_count);
     printf("Time elapsed: %f. \n", time);
   }
 
