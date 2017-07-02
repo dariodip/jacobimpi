@@ -40,11 +40,15 @@ raggiunta la convergenza e si esce dal loop.
 Occore fare uso delle operazioni di comunicazione collettiva di MPI.
 ## Solzione proposta
 Vista la natura del problema, una possibile soluzione prevede il partizionamento della matrice in righe, tutte composte dallo stesso numero di colonne, distribuite tra i vari nodi.
+
 ![Partizionamento della matrice tra i processori](https://i.imgur.com/lz2ufbO.jpg)
+
 Ogni nodo, quindi, opererà in locale solo su *(numero di righe)/(numero di processori)* righe. 
 È, tuttavia, opportuno notare che, per calcolare i valori delle proprie righe, ogni processore *i* (tranne il primo) avrà bisogno di accedere all'ultima riga del processore precedente (*i-1*) e, allo stesso modo, ogni processore, tranne l'ultimo *i* avrà bisogno della prima riga del processore successivo (*i+1*). Queste righe, tuttavia, occorrono solo come punti estremi per il calcolo degli elementi delle righe: tali valori non saranno calcolati in *xnew* e non rientrano quindi nel numero locale di righe per ogni processore.
 Per il motivo succitato, occorre creare una topologia nella quale ogni processore passa le righe necessarie agli altri nodi. Tale topologia è illustrata nell'immagine seguente, mostrando, come esempio, solo quattro processori. Le frecce verdi indicano il passaggio dell'ultima riga, le frecce rosse indicano il passaggio della prima riga.
+
 ![Topologia per il passaggio delle righe.](https://i.imgur.com/LwnPHhv.jpg)
+
 Per il calcolo della convergenza, possiamo calcolare indipendentemente *diffnorm* per ogni matrice ed infine sommare questi valori in ogni processore ed applicare l'operazione di radice quadrata. Questa operazione è possibile dato che *diffnorm* è la somma dei quadrati della differenza tra il valore di *xnew* ed il valore di *x* per una coppia di indici *(i,j)*, quindi è possibile calcolare tale valore per ogni sottomatrice ed infine sommarla.
 ### Implementazione
 La prima operazione da effettuare è il calcolo degli indici:
