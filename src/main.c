@@ -8,6 +8,7 @@
 #define MAX_ITERATIONS 100
 #define DEBUG 0
 #define THRESHOLD 1.0e-4
+#define MERGE 0
 
 
 int main(int argc, char **argv) {
@@ -122,11 +123,63 @@ int main(int argc, char **argv) {
     global_diffnorm = sqrt(global_diffnorm);
   }
 
+// Print whole matrix if required
+#if MERGE
+  float *local_as_row = NULL;                              // local to send
+  float *global_as_row = NULL;                             // global to print
+  int array_size = gridsize * (procgridsize + extra_rows); // size of local matrix
+
+  int *displs = (int *)malloc(num_proc*sizeof(int));       // displacement for each local matrix
+  int *rcounts = (int *)malloc(num_proc*sizeof(int));     // send count for each local matrix
+  displs[0] = 0;                                          // first will be the first
+  rcounts[0] = gridsize * procgridsize;                   
+  for (int i = 1; i < num_proc; i++) {                    
+    displs[i] = displs[i-1] + gridsize * procgridsize;    // displace preceding plus my size
+    rcounts[i] = gridsize * procgridsize;                 // local size
+  }
+
+  // I have to recompute this...
+  rcounts[num_proc - 1] = gridsize * (procgridsize + (gridsize % num_proc)); // all rows plus extra
+
+  local_as_row = (float *) calloc(array_size, sizeof(float));     // allocate and fill local as a row
+  int k = 0;
+  for (int i = first_local_row; i <= last_local_row; i++) {
+    for (int j = 0; j < gridsize; j++) {
+      local_as_row[k++] = local[i][j];
+    }
+  }
+#if DEBUG
+    printf("Local as row for %d: \n", rank);          // just a check..
+    print_array(local_as_row, array_size);
+    fflush(stdout);
+#endif
+
+  if (rank == 0) {
+    global_as_row = (float *) calloc(gridsize * gridsize, sizeof(float));
+  } 
+
+  // merge global matrix (we used Gatherv because of extra rows)
+  MPI_Gatherv(local_as_row, rcounts[rank], MPI_FLOAT, global_as_row, rcounts,
+   displs,  MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    printf("Final global matrix \n");
+    int k = 0;
+    for (int i = 0; i < gridsize; i++) {
+      for (int j = 0; j < gridsize; j++) {
+        printf("%.2f ", global_as_row[k++]);
+      }
+      printf("\n");
+      fflush(stdout);
+    }
+  }
+
+#endif
 
   MPI_Barrier(MPI_COMM_WORLD);
   time += MPI_Wtime();
   if (rank == 0) {
-    printf("Global Diffnorm: %.4f. \n Total iterations: %d. \n", global_diffnorm, iteration_count);
+    printf("Global Diffnorm: %.4f. \n Total iterations: %d. \n", global_diffnorm, iteration_count - 1);
     printf("Time elapsed: %f. \n", time);
   }
 
