@@ -93,14 +93,23 @@ La funzione `MPI_Allreduce` combina i valori da tutti i processori e distribuisc
 L'utilizzo di questa funzione, invece di `MPI_Reduce`, è motivato dal fatto che, quest'ultima effettua un'operazione sui valori da tutti i processore ma ne utilizza il valore su un singolo processore, mentre, per il nostro problema, abbiamo bisogno che ogni processore abbia questo valore, in modo da poter terminare il ciclo principale una volta raggiunta la convergenza.
 
 ## Benchmarking
-I benchmark sono stati condotti utilizzando delle macchine c3.large di Amazon AWS, una configurazione di istanza avente un processore Intel Xeon E5-2680 v2 (Ivy Bridge) ad alta frequenza, 3.75GB di memoria RAM ed uno storage da 16GB su SSD.
+I benchmark sono stati condotti utilizzando delle macchine m4.xlarge di Amazon AWS, una configurazione di istanza avente quattro processori Intel Xeon® E5-2686 v4 (Broadwell) da 2,3 GHz e 16GB di memoria RAM.
 Sono stati eseguiti due tipologie di test:
-- **Strong Scaling**: La dimensione del problema è rimasta costante e sono stati effettuati i test di benchmark aumentando il numero dei processori. Come si può vedere dal grafico i risultati ottenuti, in termini di millisecondi, mostrano che aumentando il numero di istanze, il tempo di esecuzione si riduce.
-![Grafico Strong Scaling](strong.png "Strong Scaling")
+- **Strong Scaling**: La dimensione del problema è rimasta costante e sono stati effettuati i test aumentando il numero dei processori. 
+
+Come si può vedere dal grafico sottostante, il tempo diminuisce con il crescere del numero di processori utilizzati.
+
+![Grafico Strong Scaling](img/Strong.png)
+
 <br>
 <br>
-- **Weak Scaling**: Questo test è stato effettuando assegnando un input uguale ad ogni processore, nel caso specifico 300 righe e 300 colonne, e aumentando proporzionalmente sia la grandezza dell'input, sia il numero di processori.  
-![Grafico Weak Scaling](weak.png "Weak Scaling")
+
+- **Weak Scaling**: Questo test è stato effettuato mantenendo costante il carico per ogni processore (i.e. 170 righe per processore), ed aumentando contemporaneamente sia la taglia del problema che il numero di processori.
+
+Come si può vedere nel grafico sottostante, il tempo aumenta con l'aumentare della taglia del problema e del numero di processori.
+
+![Grafico Weak Scaling](img/Weak.png)
+
 <br>
 
 
