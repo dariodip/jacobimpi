@@ -28,8 +28,8 @@ int main(int argc, char **argv) {
   MPI_Status mpi_status; // status
 
   const int procgridsize = gridsize / num_proc; // size of process grid
-  int additional_rows = 2;
 
+  int additional_rows = 2;
   if (rank == 0) {
     additional_rows--;
   }
@@ -39,10 +39,10 @@ int main(int argc, char **argv) {
   int first_local_row = rank == 0 ? 0 : 1;
   int last_local_row =  rank == 0 ? procgridsize - 1 : procgridsize;
 
-  if (rank == num_proc - 1 && gridsize % num_proc != 0) {
-    int other_rows = (gridsize % num_proc);
-    additional_rows += other_rows;
-    last_local_row += other_rows;
+  const int extra_rows = rank == num_proc -1 ? gridsize % num_proc : 0;
+  if (rank == num_proc - 1 && extra_rows != 0) {
+    additional_rows += extra_rows;
+    last_local_row += extra_rows;
   }
 
   const int first_i = rank == 0 ? first_local_row + 1 : first_local_row; // avoid ghostpoints
@@ -121,6 +121,7 @@ int main(int argc, char **argv) {
     MPI_Allreduce(&diffnorm, &global_diffnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     global_diffnorm = sqrt(global_diffnorm);
   }
+
 
   MPI_Barrier(MPI_COMM_WORLD);
   time += MPI_Wtime();
