@@ -92,7 +92,17 @@ Per il calcolo dell'interno *diffnorm* utilizziamo la funzione `MPI_Allreduce` d
 La funzione `MPI_Allreduce` combina i valori da tutti i processori e distribuisce indietro il risultato tra tutti i processori. 
 L'utilizzo di questa funzione, invece di `MPI_Reduce`, è motivato dal fatto che, quest'ultima effettua un'operazione sui valori da tutti i processore ma ne utilizza il valore su un singolo processore, mentre, per il nostro problema, abbiamo bisogno che ogni processore abbia questo valore, in modo da poter terminare il ciclo principale una volta raggiunta la convergenza.
 
-## Benchmarking
+## Test
+### Compilazione
+Per compilare il programma è sufficiente posizionarsi nella directory *src* ed eseguire il seguente comando:
+
+`make`.
+
+Per eseguirlo, invece, è necessario eseguire il seguente comando:
+
+`mpirun -np NUMERO_DI_PROCESSORI main DIMENSIONE_MATRICE`.
+
+### Benchmarking
 I benchmark sono stati condotti utilizzando delle macchine m4.xlarge di Amazon AWS, una configurazione di istanza avente quattro processori Intel Xeon® E5-2686 v4 (Broadwell) da 2,3 GHz e 16GB di memoria RAM.
 Sono stati eseguiti due tipologie di test:
 - **Strong Scaling**: La dimensione del problema è rimasta costante e sono stati effettuati i test aumentando il numero dei processori. 
