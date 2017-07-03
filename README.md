@@ -20,7 +20,7 @@ Per computare una approssimazione della soluzione dell'equazione di Laplace è n
 
 Questa operazione assegna ad ogni elemento della matrice *xnew* la media dei valori attorno ad esso e, al termine di questa operazione, sostituisce i valori della matrice originale *x* con i valori della matrice *xnew* così calcolati.
 
-Questa operazione va tuttavia effettuata solo per i punti centrali, non considerando i bordi della matrice. Quindi, supponendo una matrice *n`*`n*, i valori
+Questa operazione va tuttavia effettuata solo per i punti centrali, non considerando i bordi della matrice. Quindi, supponendo una matrice *n\*n*, i valori
 
     x[0][j]
     x[n-1][j]
