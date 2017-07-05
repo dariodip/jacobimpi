@@ -164,6 +164,8 @@ Per eseguirlo, invece, è necessario eseguire il seguente comando:
 ### Benchmarking
 I benchmark sono stati condotti utilizzando delle macchine m4.xlarge di Amazon AWS, una configurazione di istanza avente quattro processori Intel Xeon® E5-2686 v4 (Broadwell) da 2,3 GHz e 16GB di memoria RAM.
 
+Ciascun test è stato ripetuto 10 volte ed il tempo mostrato nei grafici seguenti è dato da una media tra tutti i valori ottenuti per ciascuna combinazione.
+
 Sono stati eseguiti due tipologie di test:
 
 - **Strong Scaling**: La dimensione del problema è rimasta costante e sono stati effettuati i test aumentando il numero dei processori. 
@@ -177,7 +179,7 @@ Come si può vedere dal grafico sottostante, il tempo diminuisce con il crescere
 
 - **Weak Scaling**: Questo test è stato effettuato mantenendo costante il carico per ogni processore (i.e. 170 righe per processore), ed aumentando contemporaneamente sia la taglia del problema che il numero di processori.
 
-Come si può vedere nel grafico sottostante, il tempo aumenta con l'aumentare della taglia del problema e del numero di processori.
+Come si può vedere nel grafico sottostante, il tempo aumenta con l'aumentare della taglia del problema e del numero di processori. Su ogni punto è presente il numero di righe della matrice presa in esame.
 
 ![Grafico Weak Scaling](img/Weak.png)
 
