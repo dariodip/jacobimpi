@@ -8,17 +8,10 @@
 #define MAX_ITERATIONS 100
 #define DEBUG 0
 #define THRESHOLD 1.0e-4
-#define MERGE 0
+#define MERGE 1
 
 
 int main(int argc, char **argv) {
-
-  if (argc != 2) {
-    fprintf(stderr, "usage: mpirun -np num_proc main N \n");
-    return -1;
-  }
-
-  const int gridsize = atoi(argv[1]); // size of grid
   int rank;                           // rank of current process
   int num_proc;                       // processors count
   double time = 0.0;
@@ -28,6 +21,11 @@ int main(int argc, char **argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Status mpi_status; // status
 
+  if (argc != 2 && rank == 0) {
+    fprintf(stderr, "usage: mpirun -np num_proc main N \n");
+    return -1;
+  }
+  const int gridsize = atoi(argv[1]); // size of grid
   const int procgridsize = gridsize / num_proc; // size of process grid
 
   int additional_rows = 2;
@@ -40,10 +38,13 @@ int main(int argc, char **argv) {
   int first_local_row = rank == 0 ? 0 : 1;
   int last_local_row =  rank == 0 ? procgridsize - 1 : procgridsize;
 
-  const int extra_rows = rank == num_proc -1 ? gridsize % num_proc : 0;
-  if (rank == num_proc - 1 && extra_rows != 0) {
-    additional_rows += extra_rows;
-    last_local_row += extra_rows;
+  const int extra_rows = gridsize % num_proc;
+  int extra_rows_for_balancing = 0;
+  int balancing_index = num_proc - extra_rows;
+  if (rank >= balancing_index) {
+    last_local_row ++;
+    additional_rows ++;
+    extra_rows_for_balancing ++;
   }
 
   const int first_i = rank == 0 ? first_local_row + 1 : first_local_row; // avoid ghostpoints
@@ -96,6 +97,7 @@ int main(int argc, char **argv) {
                MPI_COMM_WORLD, &mpi_status);
     }
 #if DEBUG
+    printf("------- ITERATION [%d] --------\n", iteration_count);
     printf("Complete array of %d at iteration %d is: \n", rank, iteration_count);
     print_matrix(procgridsize + additional_rows, gridsize, local);
 #endif
@@ -125,21 +127,22 @@ int main(int argc, char **argv) {
 
 // Print whole matrix if required
 #if MERGE
+// TODO verificare che ogni processore abbia size e displacement corretti
+// per fare questo creare un array contenente, per ogni rank i, il numero di elementi di 
+// competenza di i
   float *local_as_row = NULL;                              // local to send
   float *global_as_row = NULL;                             // global to print
-  int array_size = gridsize * (procgridsize + extra_rows); // size of local matrix
+  int array_size = gridsize * (procgridsize + extra_rows_for_balancing); // size of local matrix
 
   int *displs = (int *)malloc(num_proc*sizeof(int));       // displacement for each local matrix
   int *rcounts = (int *)malloc(num_proc*sizeof(int));     // send count for each local matrix
   displs[0] = 0;                                          // first will be the first
-  rcounts[0] = gridsize * procgridsize;                   
-  for (int i = 1; i < num_proc; i++) {                    
-    displs[i] = displs[i-1] + gridsize * procgridsize;    // displace preceding plus my size
-    rcounts[i] = gridsize * procgridsize;                 // local size
+  rcounts[0] = gridsize * procgridsize;                   // and takes always the same
+  for (int i = 1; i < num_proc; i++) {                    // i = processor i
+    displs[i] = displs[i-1] + rcounts[i-1];               // displace based on preceding
+    int odds = (i >= balancing_index) ? gridsize : 0;     // this should take also another row
+    rcounts[i] = array_size + odds;                       // local size
   }
-
-  // I have to recompute this...
-  rcounts[num_proc - 1] = gridsize * (procgridsize + (gridsize % num_proc)); // all rows plus extra
 
   local_as_row = (float *) calloc(array_size, sizeof(float));     // allocate and fill local as a row
   int k = 0;
@@ -148,18 +151,19 @@ int main(int argc, char **argv) {
       local_as_row[k++] = local[i][j];
     }
   }
+
 #if DEBUG
     printf("Local as row for %d: \n", rank);          // just a check..
     print_array(local_as_row, array_size);
     fflush(stdout);
 #endif
 
-  if (rank == 0) {
+  if (rank == 0) {                        // allocate global matrix (as a row)
     global_as_row = (float *) calloc(gridsize * gridsize, sizeof(float));
   } 
 
   // merge global matrix (we used Gatherv because of extra rows)
-  MPI_Gatherv(local_as_row, rcounts[rank], MPI_FLOAT, global_as_row, rcounts,
+  MPI_Gatherv(local_as_row, array_size, MPI_FLOAT, global_as_row, rcounts,
    displs,  MPI_FLOAT, 0, MPI_COMM_WORLD);
 
   if (rank == 0) {
@@ -167,7 +171,7 @@ int main(int argc, char **argv) {
     int k = 0;
     for (int i = 0; i < gridsize; i++) {
       for (int j = 0; j < gridsize; j++) {
-        printf("%.2f ", global_as_row[k++]);
+        printf("%05.2f ", global_as_row[k++]);
       }
       printf("\n");
       fflush(stdout);
@@ -181,8 +185,11 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("Global Diffnorm: %.4f. \n Total iterations: %d. \n", global_diffnorm, iteration_count - 1);
     printf("Time elapsed: %f. \n", time);
+    fflush(stdout);
   }
 
+  free(global_as_row);
+  free(local_as_row);
   MPI_Finalize();
 
   return 0;
