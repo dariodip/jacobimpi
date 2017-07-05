@@ -48,7 +48,7 @@ Vista la natura del problema, una possibile soluzione prevede il partizionamento
 
 ![Partizionamento della matrice tra i processori](img/division.jpg)
 
-Ogni nodo, quindi, opererà in locale solo su *(numero di righe)/(numero di processori)* righe. 
+Ogni nodo, quindi, opererà in locale solo su *(numero di righe)/(numero di processori)* righe. Qualora il numero di righe non fosse multiplo del numero di processori, gli ultimi *(numero di righe) mod (numero di processori)* processori saranno responsabili di una riga aggiuntiva ciascuno.
 
 È, tuttavia, opportuno notare che, per calcolare i valori delle proprie righe, ogni processore *i* (tranne il primo) avrà bisogno di accedere all'ultima riga del processore precedente (*i-1*) e, allo stesso modo, ogni processore, tranne l'ultimo *i* avrà bisogno della prima riga del processore successivo (*i+1*). Queste righe, tuttavia, occorrono solo come punti estremi per il calcolo degli elementi delle righe: tali valori non saranno calcolati in *xnew* e non rientrano quindi nel numero locale di righe per ogni processore.
 
@@ -111,17 +111,15 @@ Qualora si volesse ricavare la matrice intera, con i valori calcolati, è suffic
 
     #if MERGE
 
-       ...
-       
       int *displs = (int *)malloc(num_proc*sizeof(int));       // displacement for each local matrix
       int *rcounts = (int *)malloc(num_proc*sizeof(int));     // send count for each local matrix
       displs[0] = 0;                                          // first will be the first
-      rcounts[0] = gridsize * procgridsize;                   
-      for (int i = 1; i < num_proc; i++) {                    
-        displs[i] = displs[i-1] + gridsize * procgridsize;    // displace preceding plus my size
-        rcounts[i] = gridsize * procgridsize;                 // local size
+      rcounts[0] = gridsize * procgridsize;                   // and takes always the same
+      for (int i = 1; i < num_proc; i++) {                    // i = processor i
+        displs[i] = displs[i-1] + rcounts[i-1];               // displace based on preceding
+        int odds = (i >= balancing_index) ? gridsize : 0;     // this should take also another row
+        rcounts[i] = array_size + odds;                       // local size
       }
-      rcounts[num_proc - 1] = gridsize * (procgridsize + (gridsize % num_proc)); // all rows plus extra
 
       local_as_row = (float *) calloc(array_size, sizeof(float));     // allocate and fill local as a row
       int k = 0;
@@ -130,28 +128,28 @@ Qualora si volesse ricavare la matrice intera, con i valori calcolati, è suffic
           local_as_row[k++] = local[i][j];
         }
       }
-    
       ...
 
-      if (rank == 0) {
+      if (rank == 0) {                        // allocate global matrix (as a row)
         global_as_row = (float *) calloc(gridsize * gridsize, sizeof(float));
       } 
 
+      // merge global matrix (we used Gatherv because of extra rows)
+      MPI_Gatherv(local_as_row, array_size, MPI_FLOAT, global_as_row, rcounts,
+      displs,  MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-      MPI_Gatherv(local_as_row, rcounts[rank], MPI_FLOAT, global_as_row, rcounts,
-       displs,  MPI_FLOAT, 0, MPI_COMM_WORLD);
+      ...
 
-     ...
-     
     #endif
+
    
 Come si può vedere dal codice, vengono creati gli array *displs* e *rcounts*.
 
-In *displs* sono presenti gli spiazzamenti necessari per `MPI_Gatherv`: inizialmente 0, poi il valore della cella precedente più il numero di elementi locali per ogni singolo processore;
+In *displs* sono presenti gli spiazzamenti necessari per `MPI_Gatherv`: inizialmente 0, poi il valore della cella precedente più il numero di elementi del processore precedente;
 
 In *rcounts* è presente, alla cella *i*, il numero di elementi computati dal processore *i*.
 
-L'utilizzo di `MPI_Gatherv` è motivato dal fatto che l'ultimo processore potrebbe lavorare su più righe rispetto agli altri nel caso in cui il numero delle righe non fosse multiplo del numero di processori.
+L'utilizzo di `MPI_Gatherv` è motivato dal fatto che gli ultimi *(numero di righe) mod (numero di processori)* processori potrebbero lavorare su una riga in più rispetto agli altri nel caso in cui il numero delle righe non fosse multiplo del numero di processori.
 
 ## Test
 ### Compilazione

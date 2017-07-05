@@ -127,9 +127,7 @@ int main(int argc, char **argv) {
 
 // Print whole matrix if required
 #if MERGE
-// TODO verificare che ogni processore abbia size e displacement corretti
-// per fare questo creare un array contenente, per ogni rank i, il numero di elementi di 
-// competenza di i
+
   float *local_as_row = NULL;                              // local to send
   float *global_as_row = NULL;                             // global to print
   int array_size = gridsize * (procgridsize + extra_rows_for_balancing); // size of local matrix
