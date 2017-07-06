@@ -50,7 +50,7 @@ Vista la natura del problema, una possibile soluzione prevede il partizionamento
 
 Ogni nodo, quindi, opererà in locale solo su *(numero di righe)/(numero di processori)* righe. Qualora il numero di righe non fosse multiplo del numero di processori, gli ultimi *(numero di righe) mod (numero di processori)* processori saranno responsabili di una riga aggiuntiva ciascuno.
 
-È, tuttavia, opportuno notare che, per calcolare i valori delle proprie righe, ogni processore *i* (tranne il primo) avrà bisogno di accedere all'ultima riga del processore precedente (*i-1*) e, allo stesso modo, ogni processore, tranne l'ultimo *i* avrà bisogno della prima riga del processore successivo (*i+1*). Queste righe, tuttavia, occorrono solo come punti estremi per il calcolo degli elementi delle righe: tali valori non saranno calcolati in *xnew* e non rientrano quindi nel numero locale di righe per ogni processore.
+È, tuttavia, opportuno notare che, per calcolare i valori delle proprie righe, ogni processore *i* (tranne il primo) avrà bisogno di accedere all'ultima riga del processore precedente (*i-1*) e, allo stesso modo, ogni processore *i*, tranne l'ultimo, avrà bisogno della prima riga del processore successivo (*i+1*). Queste righe, tuttavia, occorrono solo come punti estremi per il calcolo degli elementi delle righe: tali valori non saranno calcolati in *xnew* e non rientrano quindi nel numero locale di righe per ogni processore.
 
 Per il motivo succitato, occorre creare una topologia nella quale ogni processore passa le righe necessarie agli altri nodi. Tale topologia è illustrata nell'immagine seguente, mostrando, come esempio, solo quattro processori. Le frecce verdi indicano il passaggio dell'ultima riga, le frecce rosse indicano il passaggio della prima riga.
 
@@ -91,14 +91,14 @@ Una volta che i processori hanno ricevuto le righe necessarie, avviene il calcol
             diffnorm += (xnew[i][j] - local[i][j]) * (xnew[i][j] - local[i][j]);
           }
         }
-        for (int i = first_i; i <= last_i; i++) {
-          for (int j = 1; j < gridsize - 1; j++) {
-            local[i][j] = xnew[i][j];
-          }
-    }
+    for (int i = first_i; i <= last_i; i++) {
+      for (int j = 1; j < gridsize - 1; j++) {
+        local[i][j] = xnew[i][j];
+      }
+      
 Il calcolo viene effettuato, come si può notare, solo per le righe interne della sottomatrice.
 
-Per il calcolo dell'interno *diffnorm* utilizziamo la funzione `MPI_Allreduce` di MPI:
+Per il calcolo dell'intero *diffnorm* (*global_diffnorm*) utilizziamo la funzione `MPI_Allreduce` di MPI:
 
     MPI_Allreduce(&diffnorm, &global_diffnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     global_diffnorm = sqrt(global_diffnorm);
